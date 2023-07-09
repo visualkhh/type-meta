@@ -1,0 +1,30 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsx test.ts",
+    "test:watch": "tsx watch test.ts",
+    "node:test:watch": "tsx watch node:test.ts",
+    "server:test": "tsx server:test.ts",
+    "server:test:watch": "tsx watch server:test.ts",
+    "proxy:test": "tsx proxy:test.ts",
+    "proxy:test:watch": "tsx watch proxy:test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/cors": "^2.8.13",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "objectmeta": "file:../dist",
+    "tsx": "^3.12.6"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.17",
+    "@types/node": "^18.16.0",
+    "typescript": "^5.0.4"
+  }
+}
