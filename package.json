@@ -6,8 +6,11 @@
   "description": "object meta infomation.",
   "keywords": [
     "object",
+    "type",
     "meta",
-    "infomation"
+    "infomation",
+    "sql builder",
+    "sql"
   ],
   "author": "visualkhh <visualkhh@gmail.com> (https://github.com/visualkhh)",
   "contributors": [

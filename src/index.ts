@@ -47,41 +47,40 @@ export type FlatKeyExcludeArrayDeep<T> = {
 }
 
 export type SQLType = 'SELECT' | 'DELETE' | 'UPDATE';
-type RelationshipOperator = 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
+type ManualValue<T> = string | number | boolean | null ; // | RootFlatKey<T>;
+export type Target<T, ROOT = T> = Meta<T, ROOT> | string;
+
+type RelationshipOperator = 'JOIN' | 'CROSS JOIN' | 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
 type LogicalOperator = 'AND' | 'OR';
+// type TargetJoinOperator = 'ON';
 type ComparisonOperator = '=' | '!=' | '>' | '<' | '>=' | '<=' | 'IN' | 'NOT IN' | 'LIKE' | 'NOT LIKE' | 'IS' | 'IS NOT' | 'BETWEEN' | 'NOT BETWEEN';
 type Direction = 'ASC' | 'DESC';
-type ManualValue<T> = string | number | boolean | null | RootFlatKey<T>;
 type RelationShipWhere<T> = {
-  operandFirst: ManualValue<T>;
+  operandFirst: ManualValue<T> | Meta<T>;
   operator: ComparisonOperator;
-  operandSecond: ManualValue<T>;
+  operandSecond: ManualValue<T> | Meta<T>;
   joinOperator?: LogicalOperator;
 };
 
 type Where<T> = {
-  operandFirst: ManualValue<T> //| Meta<T, ROOT>;
-  operator: LogicalOperator | ComparisonOperator | RelationshipOperator;
-  operandSecond: ManualValue<T>; //| Meta<T, ROOT>;
-  joinOperator?: LogicalOperator;
+  operandFirst: ManualValue<T> | Meta<T>;
+  operator: LogicalOperator | ComparisonOperator | RelationshipOperator ;
+  operandSecond: ManualValue<T> | Meta<T>;
+  joinOperator?: LogicalOperator ;
 };
-export type Target<T, ROOT = T> = Meta<T, ROOT> | ManualValue<ROOT>;
+
+
 type MetaBody<T, ROOT = T> = {
-  // $alias?: string;
   $target?: Target<T, ROOT>;
   $order?: { path: ManualValue<ROOT>, direction: Direction }[];
   $relationship?: {
-    operator?: RelationshipOperator,
+    operator?: RelationshipOperator | string,
     where?: (RelationShipWhere<ROOT> | RelationShipWhere<T>[])[]
   };
 
   $where?: (Where<ROOT> | Where<ROOT>[])[]
 }
-// export type Meta<T, ROOT = T> = MetaBody<T, ROOT> &
-// {
-//   // @ts-ignore
-//   [P in FlatKey<T>]?: GetPath<T, P> extends object ? Meta<GetPath<T, P>, ROOT> : MetaBody<GetPath<T, P>, ROOT>;
-// }
+
 export type Meta<T, ROOT = T> = MetaBody<T, ROOT> & {
   [P in keyof T as T[P] extends object ? P : never]?: Meta<T[P], ROOT>;
 } & {
@@ -89,17 +88,85 @@ export type Meta<T, ROOT = T> = MetaBody<T, ROOT> & {
 }
 
 
-// } & {
-//   [P in keyof T as T[P] extends object ? P : never]?:
-//   T[P] extends (infer AI)[] ?
-//     AI extends object ?
-//       FetchRequest<AI, C>
-//       : RequestFetchBody<T, RequestTypeType extends keyof T[P] ? T[P][RequestTypeType] : C, R>
-//     : FetchRequest<T[P], C>;
-// }
-//
 
 
+const isMeta = (target: any): target is Meta<any> => {
+  return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target);
+}
+
+// const skipKey = ['$alias', '$order', '$where', '$value'];
+const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
+  // @ts-ignore
+  const $target = ( isMeta(meta['$target']) ? (`(${sql('SELECT', meta['$target'] as Meta<F>)})`) : meta['$target']) as string | undefined;
+  // $target = $target?.replace('$', '_root_').replace('.', '_dot_');
+  // @ts-ignore
+  const $where = meta['$where'];
+  // const alias = keys.join('_dot_').replace('$', '_root_');
+  const alias = keys.join('.');
+
+  if ($target) {
+    // let target = `${$target} ${alias ? `AS \`${(alias)}\`` : ''}`;
+    // let target = `${$target} ${alias ? `AS ${(alias)}` : ''}`;
+    let target = `${$target}`;
+    // @ts-ignore
+    let relationship = meta['$relationship'];
+    if (relationship) {
+      target = `${relationship.operator ?? ','} ${target}`;
+      const on = relationship.where?.map(it => {
+        if (Array.isArray(it)) {
+          const flat = it.map(it => {
+            const operandFirst = (isMeta(it.operandFirst) ? (`(${sql('SELECT', it.operandFirst)})`) : it.operandFirst) as string;
+            const operandSecond = (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
+            return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`
+          });
+          return `(${flat.join(' ')})`;
+        } else {
+          const operandFirst = (isMeta(it.operandFirst) ? (`(${sql('SELECT', it.operandFirst)})`) : it.operandFirst) as string;
+          const operandSecond = (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
+          return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`;
+        }
+      })
+      if (on) {
+        target += ` ON ${on.join(' ')}`;
+      }
+    }
+    trunks.push({columns: [], from: target, alias: alias, wheres: []});
+  }
 
 
+  if ($where) {
+    const wheres = $where.map(it => {
+      if (Array.isArray(it)) {
+        const flat = it.map(it => `${it.operandFirst as string} ${it.operator} ${it.operandSecond as string} ${it.joinOperator ?? ''}`);
+        return `(${flat.join(' ')})`;
+      } else {
+        return `${it.operandFirst as string} ${it.operator} ${it.operandSecond as string} ${it.joinOperator ?? ''}`;
+      }
+    });
+    trunks.find(it => it.alias === alias)?.wheres.push(...wheres);
+  }
 
+
+  for (const [key, value] of Array.from(Object.entries(meta))) {
+    // @ts-ignore
+    if (!key.startsWith('$') && $target && typeof value['$target'] === 'string' && value['$relationship'] === undefined) {
+      // @ts-ignore
+      const ttt = value['$target'];
+      trunks.find(it => it.alias === alias)?.columns.push(ttt);
+    } else if (!key.startsWith('$')) {
+      const newKeys = [...keys, key];
+      from(value as Meta<any>, newKeys, trunks);
+    }
+  }
+  return trunks;
+}
+export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
+  const fromData = from(meta, ['$']);
+  console.log(fromData);
+  const presentations = fromData.map(it => it.columns);
+  const wheres = fromData.map(it => it.wheres);
+  console.log('--------', presentations, wheres)
+  let whereFlat = wheres.flat();
+  let presentFlat = presentations.flat();
+  return `${type} ${presentFlat.length ? presentFlat.join(',') : '*'} from ${fromData.map(it => it.from).join(' ')} ${whereFlat.length ? `where ${whereFlat.join(' ')}` : ''}`;
+}
