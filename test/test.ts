@@ -225,14 +225,25 @@ type CHILD = {
 }
 
 const teacher_feedback: Meta<TEACHER_FEEDBACK> = {}
+const account: Meta<ACCOUNT> = {
+  $target: 'account as account'
+}
+const teacher: Meta<TEACHER> = {
+  $target: 'teacher',
+
+}
+const visit_instance: Meta<VISIT_INSTANCE> = {}
+const child: Meta<CHILD> = {}
+
 type Query = TEACHER_FEEDBACK & {
   account: ACCOUNT;
   teacher: TEACHER;
   visit_instance: VISIT_INSTANCE;
-
 }
+
 const query: Meta<Query> = {
   $target: 'teacher_feedback as teacher_feedback',
+  $columns: ['wow', 'wowww', {meta: account, alias: 'xx'}],
   sid: {
     $target: 'teacher_feedback.sid',
   },
@@ -243,6 +254,12 @@ const query: Meta<Query> = {
       where: [
         {
           operandFirst: 'teacher_feedback.parent_account_sid',
+          operator: '=',
+          operandSecond: 'account.sid',
+          joinOperator: 'AND'
+        },
+        {
+          operandFirst: teacher,
           operator: '=',
           operandSecond: 'account.sid',
         }
@@ -284,10 +301,7 @@ const query: Meta<Query> = {
   ]
 }
 
-const account: Meta<ACCOUNT> = {}
-const teacher: Meta<TEACHER> = {}
-const visit_instance: Meta<VISIT_INSTANCE> = {}
-const child: Meta<CHILD> = {}
+
 
 const data = sql('SELECT', query);
 console.log('sql', data);
