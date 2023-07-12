@@ -44,9 +44,9 @@ const UserMeta: Meta<User> = {
     $relationship: {
       operator: 'LEFT OUTER JOIN',
       where: [{
-        operandFirst: 'age',
+        operandFirst: '$.address.summary',
         operator: '=',
-        operandSecond: '$.address.details',
+        operandSecond: '$.age',
         joinOperator: 'AND'
       }, {
         operandFirst: 'ageaaaaaaa',
