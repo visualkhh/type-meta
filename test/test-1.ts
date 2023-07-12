@@ -1,4 +1,4 @@
-import { Meta, sql, SQLType, Target } from 'objectmeta';
+import { Meta, sql, SQLType, Target } from 'type-meta';
 
 type Friend = {
   name: string;
