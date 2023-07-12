@@ -46,7 +46,7 @@ export type FlatKeyExcludeArrayDeep<T> = {
       `${P}`]: unknown;
 }
 
-
+export type SQLType = 'SELECT' | 'DELETE' | 'UPDATE';
 type RelationshipOperator = 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
 type LogicalOperator = 'AND' | 'OR';
 type ComparisonOperator = '=' | '!=' | '>' | '<' | '>=' | '<=' | 'IN' | 'NOT IN' | 'LIKE' | 'NOT LIKE' | 'IS' | 'IS NOT' | 'BETWEEN' | 'NOT BETWEEN';
@@ -65,9 +65,10 @@ type Where<T> = {
   operandSecond: ManualValue<T>; //| Meta<T, ROOT>;
   joinOperator?: LogicalOperator;
 };
+export type Target<T, ROOT = T> = Meta<T, ROOT> | ManualValue<ROOT>;
 type MetaBody<T, ROOT = T> = {
   // $alias?: string;
-  $target?: ManualValue<ROOT>;
+  $target?: Target<T, ROOT>;
   $order?: { path: ManualValue<ROOT>, direction: Direction }[];
   $relationship?: {
     operator?: RelationshipOperator,

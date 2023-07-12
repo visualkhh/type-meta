@@ -1,4 +1,4 @@
-import { Meta } from 'objectmeta';
+import { Meta, SQLType, Target } from 'objectmeta';
 
 type Friend = {
   name: string;
@@ -22,11 +22,21 @@ type User = {
   friends: Friend[]
 }
 
+
+type Office = {
+  name: string;
+  age: number;
+}
+
+const OfficeMeta: Meta<Office> = {
+  $target: 'OFFICE',
+}
 console.log('--dd-');
 
 const UserMeta: Meta<User> = {
   // $alias: 'userAlias',
-  $target: 'USER',
+  // $target: 'USER',
+  $target: OfficeMeta,
   $order: [
     {direction: 'ASC', path: 'age'}
   ],
@@ -88,7 +98,7 @@ const UserMeta: Meta<User> = {
   // age: {}
 }
 
-function surroundBacktip(target: string, alias: string) {
+const surroundBacktip = (target: string, alias: string) => {
   const a = alias.replace('$', '\\`$\\`')
   const t = target.replace('$', '\\`$\\`')
   const tt = t.replace(a, `\`${a}\``);
@@ -96,9 +106,13 @@ function surroundBacktip(target: string, alias: string) {
   return ttt;
 }
 
+const isMeta = (target: any): target is Meta<any> => {
+  return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target);
+}
+
 // const skipKey = ['$alias', '$order', '$where', '$value'];
 const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
-  const $target = meta['$target'] as string | undefined;
+  const $target = (isMeta(meta['$target']) ? (`(${sqlBuilder('SELECT', meta['$target'] as Meta<F>)})`) : meta['$target']) as string | undefined;
   const $where = meta['$where'];
   const alias = keys.join('.');
 
@@ -148,13 +162,15 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
   }
   return trunks;
 }
-const sqlBuilder = <T = any>(type: 'SELECT' | 'DELETE' | 'UPDATE', meta: Meta<T>) => {
+const sqlBuilder = <T = any>(type: SQLType, meta: Meta<T>) => {
   const fromData = from(meta, ['$']);
   console.log(fromData);
   const presentations = fromData.map(it => it.columns);
   const wheres = fromData.map(it => it.wheres);
   console.log('--------', presentations, wheres)
-  return `${type} ${presentations.flat().join(',')} from ${fromData.map(it => it.from).join(' ')} where ${wheres.flat().join(' ')}`;
+  let whereFlat = wheres.flat();
+  let presentFlat = presentations.flat();
+  return `${type} ${presentFlat.length ? presentFlat.join(',') : '*' } from ${fromData.map(it => it.from).join(' ')} ${whereFlat.length ? `where ${whereFlat.join(' ')}` : ''}`;
 }
 
 
