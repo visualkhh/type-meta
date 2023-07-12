@@ -1,4 +1,4 @@
-# objectmeta
+# type-meta
 It has the meta information of the object type and runs several combination business logic based on the data.
 
 

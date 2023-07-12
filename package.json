@@ -1,9 +1,9 @@
 {
-  "name": "objectmeta",
+  "name": "type-meta",
   "version": "0.0.1",
   "main": "index.js",
   "license": "MIT",
-  "description": "object meta infomation.",
+  "description": "object(type) meta infomation.",
   "keywords": [
     "object",
     "type",
@@ -20,14 +20,14 @@
     "Hoil-Gang (https://github.com/khl1154)",
     "hwangsero (https://github.com/hwangsero)"
   ],
-  "homepage": "https://github.com/visualkhh/objectmeta",
+  "homepage": "https://github.com/visualkhh/type-meta",
   "bugs": {
-    "url": "https://github.com/visualkhh/objectmeta",
+    "url": "https://github.com/visualkhh/type-meta",
     "email": "visualkhh@gmail.com"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/visualkhh/objectmeta"
+    "url": "https://github.com/visualkhh/type-meta"
   },
   "scripts": {
     "build": "rm -rf dist && mkdir dist && cp package.json dist && tsc --outDir dist --declarationDir dist && rm -rf dist/dist && rollup -c",
