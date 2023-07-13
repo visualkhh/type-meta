@@ -80,7 +80,7 @@ type MetaBody<T, ROOT = T> = {
     where?: (RelationShipWhere<ROOT> | RelationShipWhere<T>[])[]
   };
 
-  $columns?: Column<ROOT>[];
+  // $columns?: Column<ROOT>[];
 
   $where?: (Where<ROOT> | Where<ROOT>[])[]
 }
@@ -91,9 +91,8 @@ export type Meta<T, ROOT = T> = MetaBody<T, ROOT> & {
   [P in keyof T as T[P] extends object ? never : P]?: MetaBody<T[P], ROOT>;
 }
 
-
 const isMeta = (target: any): target is Meta<any> => {
-  return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target || '$columns' in target || '$order' in target);
+  return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target || '$order' in target); //  '$columns' in target ||
 }
 const isRefMeta = (target: any): target is RefMeta<any> => {
   return typeof target === 'object' && 'meta' in target; //  && ('alias' in target);
@@ -106,14 +105,14 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
   // $target = $target?.replace('$', '_root_').replace('.', '_dot_');
   // @ts-ignore
   const $where = meta['$where'];
-  const $columns = meta['$columns'] as Column<F>[];
-  const columns = ($columns?.map(it => {
-    if (isRefMeta(it)) {
-     return `(${sql('SELECT', it.meta)}) AS ${it?.alias}`
-    } else {
-      return it;
-    }
-  }) ?? []) as string[];
+  // const $columns = meta['$columns'] as Column<F>[];
+  // const columns = ($columns?.map(it => {
+  //   if (isRefMeta(it)) {
+  //     return `(${sql('SELECT', it.meta)}) AS ${it?.alias}`
+  //   } else {
+  //     return it;
+  //   }
+  // }) ?? []) as string[];
   // const alias = keys.join('_dot_').replace('$', '_root_');
   const alias = keys.join('.');
 
@@ -133,7 +132,7 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
             const operandSecondAlias = isRefMeta(it.operandSecond) ? it.operandSecond.alias : '';
             const operandSecondStr = isRefMeta(it.operandSecond) ? `(${sql('SELECT', it.operandSecond.meta)})` : (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
             const operandFirst = (`${operandFirstStr} ${operandFirstAlias}`) as string;
-            const operandSecond =(`${operandSecondStr} ${operandSecondAlias}`) as string;
+            const operandSecond = (`${operandSecondStr} ${operandSecondAlias}`) as string;
             return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`
           });
           return `(${flat.join(' ')})`;
@@ -143,7 +142,7 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
           const operandSecondAlias = isRefMeta(it.operandSecond) ? it.operandSecond.alias : '';
           const operandSecondStr = isRefMeta(it.operandSecond) ? `(${sql('SELECT', it.operandSecond.meta)} AS ${operandSecondAlias})` : (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
           const operandFirst = (`${operandFirstStr}`) as string;
-          const operandSecond =(`${operandSecondStr}`) as string;
+          const operandSecond = (`${operandSecondStr}`) as string;
           return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`;
         }
       })
@@ -151,7 +150,8 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
         target += ` ON ${on.join(' ')}`;
       }
     }
-    trunks.push({columns: [...columns], from: target, alias: alias, wheres: []});
+    trunks.push({columns: [], from: target, alias: alias, wheres: []});
+    // trunks.push({columns: [...columns], from: target, alias: alias, wheres: []});
   }
 
 

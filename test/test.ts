@@ -1,4 +1,4 @@
-import { Meta, sql, SQLType, Target } from 'type-meta';
+import { Meta, sql } from 'type-meta';
 
 type TEACHER_FEEDBACK = {
   sid: string,
@@ -230,7 +230,9 @@ const account: Meta<ACCOUNT> = {
 }
 const teacher: Meta<TEACHER> = {
   $target: 'teacher',
-
+  name: {
+    $target: 'teacher.name'
+  }
 }
 const visit_instance: Meta<VISIT_INSTANCE> = {}
 const child: Meta<CHILD> = {}
@@ -243,9 +245,8 @@ type Query = TEACHER_FEEDBACK & {
 
 const query: Meta<Query> = {
   $target: 'teacher_feedback as teacher_feedback',
-  $columns: ['wow', 'wowww', {meta: account, alias: 'xx'}],
   sid: {
-    $target: 'teacher_feedback.sid',
+    $target: 'teacher_feedback.sid'
   },
   account: {
     $target: 'account as account',
@@ -261,7 +262,7 @@ const query: Meta<Query> = {
         {
           operandFirst: teacher,
           operator: '=',
-          operandSecond: 'account.sid',
+          operandSecond: 'account.sid'
         }
       ]
     }
@@ -274,9 +275,12 @@ const query: Meta<Query> = {
         {
           operandFirst: 'teacher_feedback.teacher_account_sid',
           operator: '=',
-          operandSecond: 'teacher.account_sid',
+          operandSecond: 'teacher.account_sid'
         }
       ]
+    },
+    name: {
+      $target: 'teacher.name'
     }
   },
   visit_instance: {
@@ -287,7 +291,7 @@ const query: Meta<Query> = {
         {
           operandFirst: 'teacher_feedback.visit_instance_sid',
           operator: '=',
-          operandSecond: 'visit_instance.sid',
+          operandSecond: 'visit_instance.sid'
         }
       ]
     }
@@ -296,12 +300,10 @@ const query: Meta<Query> = {
     {
       operandFirst: 'teacher_feedback.created_at',
       operator: '>',
-      operandSecond: 'DATE_SUB(NOW(), INTERVAL 1 MONTH)',
+      operandSecond: 'DATE_SUB(NOW(), INTERVAL 1 MONTH)'
     }
   ]
 }
-
-
 
 const data = sql('SELECT', query);
 console.log('sql', data);
