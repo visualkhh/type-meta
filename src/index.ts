@@ -48,8 +48,8 @@ export type FlatKeyExcludeArrayDeep<T> = {
 
 export type SQLType = 'SELECT' | 'DELETE' | 'UPDATE';
 export type RefMeta<T> = { meta: Meta<T>, alias?: string };
-type ManualValue<T> = string | number | boolean; // | RootFlatKey<T>;
-export type Target<T, ROOT = T> = Meta<T, ROOT> | string;
+type ManualValue<T> = string | number | boolean | RootFlatKey<T>;
+export type Target<T, ROOT = T> = Meta<T, ROOT> | string | ManualValue<ROOT>;
 
 type RelationshipOperator = 'JOIN' | 'CROSS JOIN' | 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
 type LogicalOperator = 'AND' | 'OR';
@@ -90,6 +90,7 @@ export type Meta<T, ROOT = T> = MetaBody<T, ROOT> & {
 } & {
   [P in keyof T as T[P] extends object ? never : P]?: MetaBody<T[P], ROOT>;
 }
+export type MetaSet<F = any> = { meta: Meta<F>, sub?: (meta: Meta<F>) => string };
 
 const isMeta = (target: any): target is Meta<any> => {
   return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target || '$order' in target); //  '$columns' in target ||
@@ -98,13 +99,14 @@ const isRefMeta = (target: any): target is RefMeta<any> => {
   return typeof target === 'object' && 'meta' in target; //  && ('alias' in target);
 }
 
+
 // const skipKey = ['$alias', '$order', '$where', '$value'];
-const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
+const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
   // @ts-ignore
-  const $target = (isMeta(meta['$target']) ? (`(${sql('SELECT', meta['$target'] as Meta<F>)})`) : meta['$target']) as string | undefined;
+  const $target = (isMeta(metaSet.meta['$target']) ? (`(${metaSet.sub ? metaSet.sub(metaSet.meta['$target']) : metaSet.meta})`) : metaSet.meta['$target']) as string | undefined;
   // $target = $target?.replace('$', '_root_').replace('.', '_dot_');
   // @ts-ignore
-  const $where = meta['$where'];
+  const $where = metaSet.meta['$where'];
   // const $columns = meta['$columns'] as Column<F>[];
   // const columns = ($columns?.map(it => {
   //   if (isRefMeta(it)) {
@@ -121,16 +123,16 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
     // let target = `${$target} ${alias ? `AS ${(alias)}` : ''}`;
     let target = `${$target}`;
     // @ts-ignore
-    let relationship = meta['$relationship'];
+    let relationship = metaSet.meta['$relationship'];
     if (relationship) {
       target = `${relationship.operator ?? ','} ${target}`;
       const on = relationship.where?.map(it => {
         if (Array.isArray(it)) {
           const flat = it.map(it => {
             const operandFirstAlias = isRefMeta(it.operandFirst) ? it.operandFirst.alias : '';
-            const operandFirstStr = isRefMeta(it.operandFirst) ? `(${sql('SELECT', it.operandFirst.meta)})` : (isMeta(it.operandFirst) ? (`(${sql('SELECT', it.operandFirst)})`) : it.operandFirst) as string;
+            const operandFirstStr = isRefMeta(it.operandFirst) ? `(${metaSet.sub ? metaSet.sub(it.operandFirst.meta) : it.operandFirst.meta})` : (isMeta(it.operandFirst) ? (`(${metaSet.sub ? metaSet.sub(it.operandFirst) : it.operandFirst})`) : it.operandFirst) as string;
             const operandSecondAlias = isRefMeta(it.operandSecond) ? it.operandSecond.alias : '';
-            const operandSecondStr = isRefMeta(it.operandSecond) ? `(${sql('SELECT', it.operandSecond.meta)})` : (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
+            const operandSecondStr = isRefMeta(it.operandSecond) ? `(${metaSet.sub ? metaSet.sub(it.operandSecond.meta) : it.operandSecond.meta})` : (isMeta(it.operandSecond) ? (`(${metaSet.sub ? metaSet.sub(it.operandSecond) : it.operandSecond})`) : it.operandSecond) as string;
             const operandFirst = (`${operandFirstStr} ${operandFirstAlias}`) as string;
             const operandSecond = (`${operandSecondStr} ${operandSecondAlias}`) as string;
             return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`
@@ -138,9 +140,9 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
           return `(${flat.join(' ')})`;
         } else {
           const operandFirstAlias = isRefMeta(it.operandFirst) ? it.operandFirst.alias : '';
-          const operandFirstStr = isRefMeta(it.operandFirst) ? `(${sql('SELECT', it.operandFirst.meta)} AS ${operandFirstAlias})` : (isMeta(it.operandFirst) ? (`(${sql('SELECT', it.operandFirst)})`) : it.operandFirst) as string;
+          const operandFirstStr = isRefMeta(it.operandFirst) ? `(${metaSet.sub ? metaSet.sub(it.operandFirst.meta) : it.operandFirst.meta} AS ${operandFirstAlias})` : (isMeta(it.operandFirst) ? (`(${metaSet.sub ? metaSet.sub(it.operandFirst) : it.operandFirst})`) : it.operandFirst) as string;
           const operandSecondAlias = isRefMeta(it.operandSecond) ? it.operandSecond.alias : '';
-          const operandSecondStr = isRefMeta(it.operandSecond) ? `(${sql('SELECT', it.operandSecond.meta)} AS ${operandSecondAlias})` : (isMeta(it.operandSecond) ? (`(${sql('SELECT', it.operandSecond)})`) : it.operandSecond) as string;
+          const operandSecondStr = isRefMeta(it.operandSecond) ? `(${metaSet.sub ? metaSet.sub(it.operandSecond.meta) : it.operandSecond.meta} AS ${operandSecondAlias})` : (isMeta(it.operandSecond) ? (`(${metaSet.sub ? metaSet.sub(it.operandSecond) : it.operandSecond})`) : it.operandSecond) as string;
           const operandFirst = (`${operandFirstStr}`) as string;
           const operandSecond = (`${operandSecondStr}`) as string;
           return `${operandFirst} ${it.operator} ${operandSecond} ${it.joinOperator ?? ''}`;
@@ -168,7 +170,7 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
   }
 
 
-  for (const [key, value] of Array.from(Object.entries(meta))) {
+  for (const [key, value] of Array.from(Object.entries(metaSet.meta))) {
     // @ts-ignore
     if (!key.startsWith('$') && $target && typeof value['$target'] === 'string' && value['$relationship'] === undefined) {
       // @ts-ignore
@@ -176,14 +178,17 @@ const from = <F = any>(meta: Meta<F>, keys: string[] = [], trunks: { columns: st
       trunks.find(it => it.alias === alias)?.columns.push(ttt);
     } else if (!key.startsWith('$')) {
       const newKeys = [...keys, key];
-      from(value as Meta<any>, newKeys, trunks);
+      from({meta: value as Meta<any>, sub: metaSet.sub}, newKeys, trunks);
     }
   }
   return trunks;
 }
 //..
 export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
-  const fromData = from(meta, ['$']);
+  const metaSet: MetaSet<T> = {
+    meta: meta, sub: (meta) => sql('SELECT', meta)
+  };
+  const fromData = from(metaSet, ['$']);
   const presentations = fromData.map(it => it.columns);
   const wheres = fromData.map(it => it.wheres);
   let whereFlat = wheres.flat();
