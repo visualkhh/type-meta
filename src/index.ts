@@ -47,9 +47,10 @@ export type FlatKeyExcludeArrayDeep<T> = {
 }
 
 export type SQLType = 'SELECT' | 'DELETE' | 'UPDATE';
-export type RefMeta<T> = { meta: Meta<T>, alias?: string };
+export type MetaType = 'number' | 'string' | 'boolean';
+export type RefMeta<T> = { meta: Meta<T>, alias?: string, type?: MetaType };
 type ManualValue<T> = string | number | boolean | RootFlatKey<T>;
-export type Target<T, ROOT = T> = Meta<T, ROOT> | string | ManualValue<ROOT>;
+export type Target<T, ROOT = T> = Meta<T, ROOT> | RefMeta<T> | string | ManualValue<ROOT>;
 
 type RelationshipOperator = 'JOIN' | 'CROSS JOIN' | 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
 type LogicalOperator = 'AND' | 'OR';
@@ -71,7 +72,7 @@ type Where<T> = {
 };
 
 
-type Column<T> = ManualValue<T> | RefMeta<T>;
+// type Column<T> = ManualValue<T> | RefMeta<T>;
 type MetaBody<T, ROOT = T> = {
   $target?: Target<T, ROOT>;
   $order?: { path: ManualValue<ROOT>, direction: Direction }[];
@@ -103,7 +104,9 @@ const isRefMeta = (target: any): target is RefMeta<any> => {
 // const skipKey = ['$alias', '$order', '$where', '$value'];
 const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
   // @ts-ignore
-  const $target = (isMeta(metaSet.meta['$target']) ? (`(${metaSet.sub ? metaSet.sub(metaSet.meta['$target']) : metaSet.meta})`) : metaSet.meta['$target']) as string | undefined;
+  const target = isRefMeta(metaSet.meta['$target']) ? metaSet.meta['$target'].meta : metaSet.meta['$target'];
+  // @ts-ignore
+  const $target = (isMeta(target) ? (`(${metaSet.sub ? metaSet.sub(target) : metaSet.meta})`) : target) as string | undefined;
   // $target = $target?.replace('$', '_root_').replace('.', '_dot_');
   // @ts-ignore
   const $where = metaSet.meta['$where'];
@@ -183,7 +186,7 @@ const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { colum
   }
   return trunks;
 }
-//..
+
 export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
   const metaSet: MetaSet<T> = {
     meta: meta, sub: (meta) => sql('SELECT', meta)
@@ -194,4 +197,8 @@ export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
   let whereFlat = wheres.flat();
   let presentFlat = presentations.flat();
   return `${type} ${presentFlat.length ? presentFlat.join(',') : '*'} from ${fromData.map(it => it.from).join(' ')} ${whereFlat.length ? `where ${whereFlat.join(' ')}` : ''}`.trim();
+}
+
+export const bind = <T = any>(type: SQLType, meta: Meta<T>) => {
+
 }
