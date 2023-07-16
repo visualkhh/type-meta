@@ -102,7 +102,7 @@ const isRefMeta = (target: any): target is RefMeta<any> => {
 
 
 // const skipKey = ['$alias', '$order', '$where', '$value'];
-const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
+const sqlBuilder = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { columns: string[], from: string, alias: string, wheres: string[] }[] = []) => {
   // @ts-ignore
   const target = isRefMeta(metaSet.meta['$target']) ? metaSet.meta['$target'].meta : metaSet.meta['$target'];
   // @ts-ignore
@@ -181,7 +181,7 @@ const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { colum
       trunks.find(it => it.alias === alias)?.columns.push(ttt);
     } else if (!key.startsWith('$')) {
       const newKeys = [...keys, key];
-      from({meta: value as Meta<any>, sub: metaSet.sub}, newKeys, trunks);
+      sqlBuilder({meta: value as Meta<any>, sub: metaSet.sub}, newKeys, trunks);
     }
   }
   return trunks;
@@ -200,7 +200,7 @@ export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
       }
     }
   };
-  const fromData = from(metaSet, ['$']);
+  const fromData = sqlBuilder(metaSet, ['$']);
   const presentations = fromData.map(it => it.columns);
   const wheres = fromData.map(it => it.wheres);
   let whereFlat = wheres.flat();
@@ -208,6 +208,9 @@ export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
   return `${type} ${presentFlat.length ? presentFlat.join(',') : '*'} from ${fromData.map(it => it.from).join(' ')} ${whereFlat.length ? `where ${whereFlat.join(' ')}` : ''}`.trim();
 }
 
+export const bindBuilder = <T = any>(type: SQLType, meta: Meta<T>) => {
+
+}
 export const bind = <T = any>(type: SQLType, meta: Meta<T>) => {
 
 }
