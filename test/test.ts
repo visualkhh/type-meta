@@ -248,6 +248,9 @@ const query: Meta<Query> = {
   sid: {
     $target: 'teacher_feedback.sid'
   },
+  status: {
+    $target: 4
+  },
   account: {
     $target: 'account as account',
     $relationship: {

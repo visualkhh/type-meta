@@ -50,7 +50,7 @@ export type SQLType = 'SELECT' | 'DELETE' | 'UPDATE';
 export type MetaType = 'number' | 'string' | 'boolean';
 export type RefMeta<T> = { meta: Meta<T>, alias?: string, type?: MetaType };
 type ManualValue<T> = string | number | boolean | RootFlatKey<T>;
-export type Target<T, ROOT = T> = Meta<T, ROOT> | RefMeta<T> | string | ManualValue<ROOT>;
+export type Target<T, ROOT = T> = Meta<T, ROOT> | RefMeta<T> | string | ManualValue<ROOT> | T;
 
 type RelationshipOperator = 'JOIN' | 'CROSS JOIN' | 'LEFT JOIN' | 'RIGHT JOIN' | 'FULL OUTER JOIN' | 'LEFT OUTER JOIN' | 'RIGHT OUTER JOIN';
 type LogicalOperator = 'AND' | 'OR';
@@ -91,7 +91,7 @@ export type Meta<T, ROOT = T> = MetaBody<T, ROOT> & {
 } & {
   [P in keyof T as T[P] extends object ? never : P]?: MetaBody<T[P], ROOT>;
 }
-export type MetaSet<F = any> = { meta: Meta<F>, sub?: (meta: Meta<F>) => string };
+export type MetaSet<F = any> = { meta: Meta<F>, sub?: (meta: Meta<F> | RefMeta<F>) => string };
 
 const isMeta = (target: any): target is Meta<any> => {
   return typeof target === 'object' && ('$target' in target || '$relationship' in target || '$where' in target || '$order' in target); //  '$columns' in target ||
@@ -189,7 +189,16 @@ const from = <F = any>(metaSet: MetaSet<F>, keys: string[] = [], trunks: { colum
 
 export const sql = <T = any>(type: SQLType, meta: Meta<T>) => {
   const metaSet: MetaSet<T> = {
-    meta: meta, sub: (meta) => sql('SELECT', meta)
+    meta: meta, sub: (meta) =>  {
+      if (isMeta(meta)) {
+        return sql('SELECT', meta);
+      } else if (isRefMeta(meta)) {
+        //isRefMeta(it.operandFirst) ? `(${metaSet.sub ? metaSet.sub(it.operandFirst.meta) : it.operandFirst.meta})` : (isMeta(it.operandFirst) ? (`(${metaSet.sub ? metaSet.sub(it.operandFirst) : it.operandFirst})`) : it.operandFirst) as string;
+        return `(${sql('SELECT', meta.meta)})`;
+      } else {
+        return meta.toString?.() ?? meta;
+      }
+    }
   };
   const fromData = from(metaSet, ['$']);
   const presentations = fromData.map(it => it.columns);
